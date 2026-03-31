@@ -8,18 +8,22 @@
 #include <websocketpp/server.hpp>
 
 #include "Turtle.hpp"
+using namespace std;
 
 class TurtleRegistry {
-private:
-    std::map<websocketpp::connection_hdl, std::shared_ptr<Turtle>, std::owner_less<websocketpp::connection_hdl>> turtlesByConnection;
-    std::unordered_map<int, std::shared_ptr<Turtle>> turtlesById;
+    private:
+        map<websocketpp::connection_hdl,
+        shared_ptr<Turtle>,
+        owner_less<websocketpp::connection_hdl>> turtlesByConnection;
+        unordered_map<int, shared_ptr<Turtle>> turtlesById;
 
-public:
-    std::shared_ptr<Turtle> getByConnection(const websocketpp::connection_hdl& ws);
-    std::shared_ptr<Turtle> getById(int id);
+    public:
+        shared_ptr<Turtle> getByConnection(const websocketpp::connection_hdl& ws);
+        shared_ptr<Turtle> getById(int id);
 
-    void registerTurtle(const std::shared_ptr<Turtle>& turtle);
-    void unregisterTurtle(const std::shared_ptr<Turtle>& turtle);
-    void unregisterByConnection(const websocketpp::connection_hdl& ws);
-    void unregisterById(int id);
+        void registerTurtle(const shared_ptr<Turtle>& turtle);
+        
+        void unregisterTurtle(const shared_ptr<Turtle>& turtle);
+        void unregisterByConnection(const websocketpp::connection_hdl& ws);
+        void unregisterById(int id);
 };

@@ -9,21 +9,55 @@
 
 #include "MessageHandlers.hpp"
 #include "TurtleRegistry.hpp"
+#include "WorldMap.hpp"
 #include "Turtle.hpp"
-
 
 using json = nlohmann::json;
 using namespace std;
 
 typedef websocketpp::server<websocketpp::config::asio> server;
 
-TurtleRegistry registry;
 server turtleHub;
+
+WorldMap OverworldMap("overworld.json");
+WorldMap NetherMap("nether.json");
+WorldMap EndMap("end.json");
+
+unordered_map<string, WorldMap*> DimensionMaps = {
+    {"overworld", &OverworldMap},
+    {"nether", &NetherMap},
+    {"end", &EndMap}
+};
+
+TurtleRegistry registry;
 
 unordered_map<string, function<void(const websocketpp::connection_hdl&, const json&)>> MessageTypes = {
     {"ping", Ping::handle},
     {"turtleBorn", TurtleBorn::handle}
 };
+
+int getPort() {
+    int port = 9002;
+    string input;
+
+    cout << "Enter port to listen on (default 9002): ";
+    getline(cin, input);
+
+    if (!input.empty()) {
+        try {
+            int temp = stoi(input);
+            if (temp >= 1 && temp <= 65535) {
+                port = temp;
+            } else {
+                cout << "Port out of range. Using default.\n";
+            }
+        } catch (...) {
+            cout << "Invalid input. Using default.\n";
+        }
+    }
+
+    return port;
+}
 
 int main() {
     turtleHub.init_asio();
@@ -56,10 +90,12 @@ int main() {
         registry.unregisterByConnection(ws);
     });
 
-    turtleHub.listen(9002);
+
+    int port = getPort();
+    turtleHub.listen(port);
     turtleHub.start_accept();
 
-    cout << "TurtleHub server running on port 9002" << endl;
+    cout << "TurtleHub server running on port " << port << endl;
 
     turtleHub.run();
 

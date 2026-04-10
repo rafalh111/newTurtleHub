@@ -3,9 +3,10 @@
 #include <filesystem>
 #include <iostream>
 #include <fstream>
-
+#include <climits>
 #include "WorldMap.hpp"
 
+#include "Utils.hpp"
 using namespace std;
 using json = nlohmann::json;
 namespace fs = filesystem;
@@ -62,7 +63,6 @@ void WorldMap::CleanEntry(Vec3 pos) {
 };
 
 MapEntry WorldMap::Get(Vec3 pos) {
-    CleanEntry(pos);
     return map[pos];
 }
 
@@ -115,4 +115,18 @@ void WorldMap::Save() {
     } catch (const exception& e) {
         cerr << "Error saving map to file: " << e.what() << endl;
     }
+}
+
+bool WorldMap::MakeReservation(int id, Vec3 position, long long arriveTime, long long leaveTime) {
+    auto& entry = map[position]; // creates if missing
+    for (const auto& r : entry.reservations) {
+        long long rEnd = r.leaveTime.value_or(LLONG_MAX);
+
+        if (r.arriveTime <= leaveTime && arriveTime <= rEnd) {
+            return false;
+        }
+    }
+
+    entry.reservations.emplace_back(id, arriveTime, leaveTime);
+    return true;
 }

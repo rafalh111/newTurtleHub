@@ -12,3 +12,7 @@ namespace Ping {
 namespace TurtleBorn {
     void handle(const websocketpp::connection_hdl&, const json&);
 }
+
+namespace Journey {
+    void handle(const websocketpp::connection_hdl&, const json&);
+}

@@ -16,7 +16,6 @@ class TurtleRegistry {
         shared_ptr<Turtle>,
         owner_less<websocketpp::connection_hdl>> turtlesByConnection;
         unordered_map<int, shared_ptr<Turtle>> turtlesById;
-
     public:
         shared_ptr<Turtle> getByConnection(const websocketpp::connection_hdl& ws);
         shared_ptr<Turtle> getById(int id);

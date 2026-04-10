@@ -1,0 +1,11 @@
+=====file: ./MessageHandlers.cpp ======= cat ./MessageHandlers.cpp echo
+=====file: ./TurtleRegistry.hpp ======= cat ./TurtleRegistry.hpp echo
+=====file: ./MessageHandlers.hpp ======= cat ./MessageHandlers.hpp echo
+=====file: ./Turtle.hpp ======= cat ./Turtle.hpp echo
+=====file: ./WorldMap.hpp ======= cat ./WorldMap.hpp echo
+=====file: ./TurtleRegistry.cpp ======= cat ./TurtleRegistry.cpp echo
+=====file: ./Turtle.cpp ======= cat ./Turtle.cpp echo
+=====file: ./WorldMap.cpp ======= cat ./WorldMap.cpp echo
+=====file: ./main.cpp ======= cat ./main.cpp echo
+=====file: ./Utils.hpp ======= cat ./Utils.hpp echo
+=====file: ./combined.txt ======= cat ./combined.txt echo

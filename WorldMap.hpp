@@ -56,15 +56,15 @@ struct TurtleReservation {
     long long arriveTime;
     optional<long long> leaveTime;
 
-    friend void to_json(json& j, const TurtleReservation& r) {
-        j = json{
+    friend void to_json(nlohmann::json& j, const TurtleReservation& r) {
+        j = nlohmann::json{
             {"turtleId", r.turtleId},
             {"arriveTime", r.arriveTime},
             {"leaveTime", r.leaveTime}
         };
     }
 
-    friend void from_json(const json& j, TurtleReservation& r) {
+    friend void from_json(const nlohmann::json& j, TurtleReservation& r) {
         r.turtleId = j.at("turtleId").get<int>();
         r.arriveTime = j.at("arriveTime").get<long long>();
         if (j.contains("leaveTime") && !j.at("leaveTime").is_null()) {
@@ -96,11 +96,12 @@ struct MapEntry {
 class WorldMap {
     private:
         string mapFilePath;
-        unordered_map<Vec3, MapEntry> map;
         void CleanEntry(Vec3 pos);
+        unordered_map<Vec3, MapEntry> map;
     public:
         WorldMap(string mapFilePath);
         MapEntry Get(Vec3 pos);
         void SonarUpdate(Vec3 pos, Block block);
         void Save();
+        bool MakeReservation(int id, Vec3 position, long long arriveTime, long long leaveTime);
 };

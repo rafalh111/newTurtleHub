@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "TurtleRegistry.hpp"
+#include "WorldMap.hpp"
 #include "Turtle.hpp"
 #include "Utils.hpp"
 
@@ -16,11 +17,12 @@ using json = nlohmann::json;
 // Forward declare the registry and server
 extern TurtleRegistry registry;
 extern websocketpp::server<websocketpp::config::asio> turtleHub;
+extern unordered_map<string, WorldMap*> DimensionMaps;
 
 namespace Ping {
     struct Message {
         string type;
-        
+
         friend void from_json(const json& j, Message& m) {
             j.at("type").get_to(m.type);
         }
@@ -39,22 +41,12 @@ namespace Ping {
     }
 } // namespace Ping
 
-namespace TurtleBorn {
+namespace TurtleBorn {    
     struct Payload {
-        int id;
-        Vec3 position;
-        bool busy;
-        string face;
-        vector<Step> journeyPath;
-        int journeyStepIndex;
+        TurtleData data;
 
         friend void from_json(const json& j, Payload& p) {
-            j.at("id").get_to(p.id);
-            j.at("position").get_to(p.position);
-            j.at("busy").get_to(p.busy);
-            j.at("face").get_to(p.face);
-            j.at("journeyPath").get_to(p.journeyPath);
-            j.at("journeyStepIndex").get_to(p.journeyStepIndex);
+            j.at("data").get_to(p.data);
         }
     };
 
@@ -71,22 +63,78 @@ namespace TurtleBorn {
     void handle(const websocketpp::connection_hdl& ws, const json& message) {
         try {
             Message msg = message.get<Message>();
-
             Payload& pld = msg.payload;
-    
-            auto turtle = make_shared<Turtle>(
-                pld.id,
-                ws,
-                pld.position,
-                pld.busy,
-                pld.face,
-                pld.journeyPath,
-                pld.journeyStepIndex
-            );
-    
+
+            if (registry.getByConnection(ws)) {
+                registry.getByConnection(ws)->Update(pld.data);
+                return;
+            }
+            
+            auto turtle = make_shared<Turtle>(ws, pld.data);
             registry.registerTurtle(turtle);
         } catch (const exception& e) {
             cout << "Invalid turtleBorn message: " << e.what() << endl;
         }
     }
 } // namespace TurtleBorn
+
+namespace Journey {
+    struct Payload {
+        TurtleData data;
+        vector<Vec3> destinations;
+        long long sendTime;
+
+        friend void from_json(const json& j, Payload& p) {
+            j.at("data").get_to(p.data);
+            j.at("destinations").get_to(p.destinations);
+            j.at("sendTime").get_to(p.sendTime);
+        }
+    };
+
+    struct Message {
+        string type;
+        Payload payload;
+
+        friend void from_json(const json& j, Message& m) {
+            j.at("type").get_to(m.type);
+            j.at("payload").get_to(m.payload);
+        }
+    };
+
+    void handle(const websocketpp::connection_hdl& ws, const json& message) {
+        try {
+            Message msg = message.get<Message>();
+            Payload& pld = msg.payload;
+            
+            if (!registry.getByConnection(ws)) {
+                auto turtle = make_shared<Turtle>(ws, pld.data);
+                registry.registerTurtle(turtle);
+            }
+
+            auto senderTurtle = registry.getByConnection(ws);
+            senderTurtle->Update(pld.data);
+
+            optional<vector<JourneyStep>> journeyPath = senderTurtle->GetJourneyPath(pld.destinations);
+
+            if (journeyPath.has_value()) {
+                for (auto& journeyStep : *journeyPath) {
+                    DimensionMaps[senderTurtle->dimension]->MakeReservation(
+                        senderTurtle->id,
+                        {journeyStep.position.x, journeyStep.position.y, journeyStep.position.z},
+                        journeyStep.arriveTime.value(),
+                        journeyStep.leaveTime.value()
+                    );
+                }
+            }
+
+            json response = {
+                {"type", "journeyPath"},
+                {"payload", {"journeyPath", journeyPath}}
+            };
+
+            turtleHub.send(ws, response.dump(), websocketpp::frame::opcode::text);
+        } catch (const exception& e) {
+            cout << "Invalid journey message: " << e.what() << endl;
+        }
+    }
+};

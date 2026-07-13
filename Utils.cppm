@@ -1,6 +1,4 @@
-#ifndef UNTITLED_UTILS_H
-#define UNTITLED_UTILS_H
-
+module;
 #include <functional>
 #include <stdexcept>
 #include <optional>
@@ -11,23 +9,26 @@
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 
-#pragma once
+export module Utils;
 
-enum class neswDirections { north, east, south, west };
-enum class neswudDirections { north, east, south, west, up, down };
-enum class frbludDirections { forward, right, back, left, up, down };
+export enum turtleActions { forward, back, up, down, turnLeft, turnRight };
+
+
+export enum class neswDirections { north, east, south, west };
+export enum class neswudDirections { north, east, south, west, up, down };
+export enum class frbludDirections { forward, right, back, left, up, down };
 
 // Forward declare Vec3 for use in maps
-struct Vec3;
+export struct Vec3;
 
-inline neswDirections neswDirectionsArray[] = {
+export inline neswDirections neswDirectionsArray[] = {
     neswDirections::north,
     neswDirections::east,
     neswDirections::south,
     neswDirections::west
 };
 
-inline neswudDirections neswudDirectionsArray[] = {
+export inline neswudDirections neswudDirectionsArray[] = {
     neswudDirections::north,
     neswudDirections::east,
     neswudDirections::south,
@@ -36,7 +37,7 @@ inline neswudDirections neswudDirectionsArray[] = {
     neswudDirections::down
 };
 
-inline frbludDirections frbludDirectionsArray[] = {
+export inline frbludDirections frbludDirectionsArray[] = {
     frbludDirections::forward,
     frbludDirections::right,
     frbludDirections::back,
@@ -46,7 +47,7 @@ inline frbludDirections frbludDirectionsArray[] = {
 };
 
 // Vec3 struct
-struct Vec3 {
+export struct Vec3 {
     int x;
     int y;
     int z;
@@ -60,6 +61,13 @@ struct Vec3 {
 
     Vec3 operator+(const Vec3& other) const {
         return {x + other.x, y + other.y, z + other.z};
+    }
+
+    Vec3& operator+=(const Vec3& other) {
+        x += other.x;
+        y += other.y;
+        z += other.z;
+        return *this;
     }
 
     Vec3 operator-(const Vec3& other) const {
@@ -105,32 +113,33 @@ struct Vec3 {
     }
 };
 
-template <>
-struct std::hash<Vec3> {
-    size_t operator()(const Vec3& v) const noexcept {
-        const size_t h1 = std::hash<int>{}(v.x);
-        const size_t h2 = std::hash<int>{}(v.y);
-        const size_t h3 = std::hash<int>{}(v.z);
-        return h1 ^ h2 << 1 ^ h3 << 2;
-    }
-};
+export namespace std {
+    template<>
+    struct hash<Vec3> {
+        size_t operator()(const Vec3& v) const noexcept {
+            const size_t h1 = std::hash<int>{}(v.x);
+            const size_t h2 = std::hash<int>{}(v.y);
+            const size_t h3 = std::hash<int>{}(v.z);
+            return h1 ^ h2 << 1 ^ h3 << 2;
+        }
+    };
+}
 
-// Direction lookups
-inline std::unordered_map<neswDirections, int> neswDirectionLookup = {
+export inline std::unordered_map<neswDirections, int> neswDirectionLookup = {
     {neswDirections::north, 0},
     {neswDirections::east, 1},
     {neswDirections::south, 2},
     {neswDirections::west, 3}
 };
 
-inline std::unordered_map<std::string, neswDirections> stringToNesw = {
+export inline std::unordered_map<std::string, neswDirections> stringToNesw = {
     {"north", neswDirections::north},
     {"east", neswDirections::east},
     {"south", neswDirections::south},
     {"west", neswDirections::west}
 };
 
-inline std::unordered_map<neswudDirections, int> neswudDirectionLookup = {
+export inline std::unordered_map<neswudDirections, int> neswudDirectionLookup = {
     {neswudDirections::north, 0},
     {neswudDirections::east, 1},
     {neswudDirections::south, 2},
@@ -139,7 +148,7 @@ inline std::unordered_map<neswudDirections, int> neswudDirectionLookup = {
     {neswudDirections::down, 5}
 };
 
-inline std::unordered_map<std::string, neswudDirections> stringToNeswud = {
+export inline std::unordered_map<std::string, neswudDirections> stringToNeswud = {
     {"north", neswudDirections::north},
     {"east", neswudDirections::east},
     {"south", neswudDirections::south},
@@ -148,7 +157,7 @@ inline std::unordered_map<std::string, neswudDirections> stringToNeswud = {
     {"down", neswudDirections::down}
 };
 
-inline std::unordered_map<frbludDirections, int> frbludDirectionLookup = {
+export inline std::unordered_map<frbludDirections, int> frbludDirectionLookup = {
     {frbludDirections::forward, 0},
     {frbludDirections::right, 1},
     {frbludDirections::back, 2},
@@ -157,7 +166,7 @@ inline std::unordered_map<frbludDirections, int> frbludDirectionLookup = {
     {frbludDirections::down, 5}
 };
 
-inline std::unordered_map<std::string, frbludDirections> stringToFrblud = {
+export inline std::unordered_map<std::string, frbludDirections> stringToFrblud = {
     {"forward", frbludDirections::forward},
     {"right", frbludDirections::right},
     {"back", frbludDirections::back},
@@ -166,7 +175,7 @@ inline std::unordered_map<std::string, frbludDirections> stringToFrblud = {
     {"down", frbludDirections::down}
 };
 
-inline frbludDirections neswudToFrblud(const neswudDirections startNeswudDirection,
+export inline frbludDirections neswudToFrblud(const neswudDirections startNeswudDirection,
                                         const neswudDirections endNeswudDirection) {
     const int startIndex = neswudDirectionLookup[startNeswudDirection];
     const int endIndex = neswudDirectionLookup[endNeswudDirection];
@@ -189,7 +198,7 @@ inline frbludDirections neswudToFrblud(const neswudDirections startNeswudDirecti
     }
 }
 
-inline std::unordered_map<neswudDirections, Vec3> neswudDirectionVectors = {
+export inline std::unordered_map<neswudDirections, Vec3> neswudDirectionVectors = {
     {neswudDirections::north, Vec3(0, 0, -1)},
     {neswudDirections::east, Vec3(1, 0, 0)},
     {neswudDirections::south, Vec3(0, 0, 1)},
@@ -198,7 +207,7 @@ inline std::unordered_map<neswudDirections, Vec3> neswudDirectionVectors = {
     {neswudDirections::down, Vec3(0, -1, 0)}
 };
 
-inline std::unordered_map<Vec3, neswudDirections> duwsenDirectionVectors = {
+export inline std::unordered_map<Vec3, neswudDirections> duwsenDirectionVectors = {
     {Vec3(0, 0, -1), neswudDirections::north},
     {Vec3(1, 0, 0), neswudDirections::east},
     {Vec3(0, 0, 1), neswudDirections::south},
@@ -207,7 +216,7 @@ inline std::unordered_map<Vec3, neswudDirections> duwsenDirectionVectors = {
     {Vec3(0, -1, 0), neswudDirections::down}
 };
 
-inline std::vector<Vec3> getNeighbors(const Vec3 v) {
+export inline std::vector<Vec3> getNeighbors(const Vec3 v) {
     std::vector<Vec3> neighbors;
 
     for (const auto& vec : neswudDirectionVectors | std::views::values) {
@@ -217,11 +226,11 @@ inline std::vector<Vec3> getNeighbors(const Vec3 v) {
     return neighbors;
 }
 
-inline int manhattanDistance(const Vec3& v1, const Vec3& v2) {
+export inline int manhattanDistance(const Vec3& v1, const Vec3& v2) {
     return std::abs(v1.x - v2.x) + std::abs(v1.y - v2.y) + std::abs(v1.z - v2.z);
 }
 
-inline int multiManhattanDistance(const Vec3& v1, const std::vector<Vec3>& v2Vector) {
+export inline int multiManhattanDistance(const Vec3& v1, const std::vector<Vec3>& v2Vector) {
     if (v2Vector.empty()) {
         return 0;
     }
@@ -237,4 +246,28 @@ inline int multiManhattanDistance(const Vec3& v1, const std::vector<Vec3>& v2Vec
     return smallestDistance;
 }
 
-#endif //UNTITLED_UTILS_H
+export struct TimeInterval {
+    long long start{};
+    std::optional<long long> end;
+
+
+    [[nodiscard]] bool OverlapsWith(const TimeInterval& other) const;
+    [[nodiscard]] bool Encloses(const TimeInterval& inner) const;
+    [[nodiscard]] bool EnclosesPoint(long long point) const;
+
+    friend void to_json(nlohmann::json& j, const TimeInterval& t) {
+        j = nlohmann::json{
+                {"start", t.start},
+                {"end", t.end.has_value() ? nlohmann::json(*t.end) : nullptr}
+        };
+    }
+    friend void from_json(const nlohmann::json& j, TimeInterval& t) {
+        t.start = j.at("start").get<long long>();
+
+        if (j.contains("end") && !j.at("end").is_null()) {
+            t.end = j.at("end").get<long long>();
+        } else {
+            t.end = std::nullopt;
+        }
+    }
+};

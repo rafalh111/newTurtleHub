@@ -7,9 +7,11 @@
 #include <memory>
 #include <string>
 
-#include "MessageHandlers.h"
-#include "TurtleRegistry.h"
-#include "Globals.h"
+import MessageHandlers;
+import TurtleRegistry;
+import Globals;
+import Turtle;
+import WorldMap;
 
 using json = nlohmann::json;
 using namespace std;

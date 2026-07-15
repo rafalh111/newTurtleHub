@@ -5,7 +5,6 @@
 module;
 #include <websocketpp/common/connection_hdl.hpp>
 #include <nlohmann/json.hpp>
-#include <optional>
 #include <utility>
 #include <vector>
 #include <string>
@@ -15,6 +14,8 @@ module;
 export module Turtle;
 
 import Utils;
+import WorldMap;
+import Globals;
 // import ResponseMessages;
 export enum class TurtleAction {
     Forward,
@@ -56,7 +57,7 @@ export struct JourneyStep {
 export struct TurtleData {
     int id;
     Vec3 position;
-    std::string dimension;
+    WorldMap* dimension;
     int fuel;
     bool busy;
     neswDirections face;
@@ -66,7 +67,12 @@ export struct TurtleData {
     friend void from_json(const nlohmann::json& j, TurtleData& t) {
         t.id = j.at("id").get<int>();
         t.position = j.at("position").get<Vec3>();
-        t.dimension = j.at("dimension").get<std::string>();
+        if (const auto it = DimensionMaps.find(j.at("dimension").get<std::string>()); it != DimensionMaps.end()) {
+            t.dimension = it->second;
+        else {
+            throw std::invalid_argument("Turtle with id: " + std::to_string(t.id) + " has a dimension that doesn't exist");
+        }
+
         t.fuel = j.at("fuel").get<int>();
         t.busy = j.at("busy").get<bool>();
         t.face = j.at("face").get<neswDirections>();
@@ -79,7 +85,7 @@ export struct Turtle {
     int id;
     websocketpp::connection_hdl ws;
     Vec3 position;
-    std::string dimension;
+    WorldMap* dimension;
     int fuel;
     bool busy;
     neswDirections face;

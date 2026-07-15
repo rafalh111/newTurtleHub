@@ -12,18 +12,22 @@ import TurtleRegistry;
 import WorldMap;
 
 extern websocketpp::server<websocketpp::config::asio> turtleHub;
-extern std::unordered_map<std::string, WorldMap*> DimensionMaps;
-extern WorldMap OverworldMap;
-extern WorldMap NetherMap;
-extern WorldMap EndMap;
-
 extern TurtleRegistry registry;
+WorldMap OverworldMap;
+WorldMap NetherMap;
+WorldMap EndMap;
 
-std::unordered_map<std::string, WorldMap*>& getDimensionMaps() {
-    static std::unordered_map<std::string, WorldMap*> maps = {
-        {"overworld", &OverworldMap},
-        {"nether", &NetherMap},
-        {"end", &EndMap}
-    };
-    return maps;
-}
+extern std::unordered_map<std::string, WorldMap*> DimensionMaps = {
+    {"overworld", *OverworldMap},
+    {"nether", *NetherMap},
+    {"end", *EndMap}
+};
+
+// std::unordered_map<std::string, WorldMap*>& getDimensionMaps() {
+//     static std::unordered_map<std::string, WorldMap*> maps = {
+//         {"overworld", &OverworldMap},
+//         {"nether", &NetherMap},
+//         {"end", &EndMap}
+//     };
+//     return maps;
+// }

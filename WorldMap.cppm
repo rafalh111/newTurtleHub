@@ -280,8 +280,8 @@ void WorldMap::CleanEntry(const Vec3& pos) {
 
     auto isDangling = [&](const unique_ptr<ITimelineEntity> &timelineEntity) {
         if (!timelineEntity->getTimeInterval().EnclosesPoint(now)) return false;
-        std::optional<int> optId = timelineEntity->getId();
-        if (!optId.has_value()) return false;;
+        const std::optional<int> optId = timelineEntity->getId();
+        if (!optId.has_value()) return false;
         if (registry.getById(optId.value())->position == pos) return false;
         return true;
     };
@@ -294,7 +294,7 @@ void WorldMap::CleanEntry(const Vec3& pos) {
         return false;
     };
 
-    for (int i = timeline.size() - 1; i >= 0; --i) {
+    for (int i = static_cast<int>timeline.size() - 1; i >= 0; --i) {
         if (const auto& timelineEntity = timeline[i];
             isDangling(timelineEntity) || isExpired(timelineEntity)) {
             timeline.erase(timeline.begin() + i);
@@ -312,12 +312,12 @@ MapEntry* WorldMap::TryGet(const Vec3& vector) {
     return &it->second;
 }
 
-// const MapEntry* WorldMap::TryGet(const Vec3& vector) const {
-//     const auto it = map.find(vector);
-//     if (it == map.end()) return nullptr;
-//
-//     return &it->second;
-// }
+const MapEntry* WorldMap::TryGet(const Vec3& vector) const {
+    const auto it = map.find(vector);
+    if (it == map.end()) return nullptr;
+
+    return &it->second;
+}
 
 void WorldMap::Save() {
     try {
@@ -367,7 +367,7 @@ bool WorldMap::ValidateTimelineInsertion(const Vec3 position, const std::unique_
     return true;
 }
 
-void WorldMap::InsertTimelineEntity(const Vec3 position, std::unique_ptr<ITimelineEntity> entity, bool recomputeInsertPosition) {
+void WorldMap::InsertTimelineEntity(const Vec3 position, std::unique_ptr<ITimelineEntity> entity) {
     auto& timeline = map[position].timeline;
     const auto [start, end] = entity->getTimeInterval();
 
@@ -401,7 +401,7 @@ bool WorldMap::MakeReservation(const int id, const Vec3 position,
 
 bool WorldMap::ScheduleBlock(const std::string &name, const std::unordered_map<std::string, std::string> &state,
                              const std::vector<std::string> &tags, const Vec3 position,
-                             const TimeInterval &blockTimeInterval, const bool forced) {
+                             const TimeInterval &blockTimeInterval) {
     Block block;
     block.timeInterval = blockTimeInterval;
     block.name = name;
@@ -466,11 +466,12 @@ bool WorldMap::MakePathReservation(const int id, const vector<JourneyStep>& jour
         pairs.emplace_back(journeyPath[i].position, timeInterval);
     }
 
-    for (const auto& [position, timeInterval] : pairs) {
-        if (MakeReservation(id, position, timeInterval, false) == false) return false;
-    }
-
-    return true;
+    return std::ranges::all_of(
+        pairs,
+        [&](const auto& pair) {
+            return MakeReservation(id, pair.first, pair.second, false);
+        }
+    );
 }
 
 std::optional<std::vector<JourneyStep>> WorldMap::GetJourneyPath(shared_ptr<Turtle> turtle, const std::vector<Vec3> &destinations, long long timeLimit, long long timeAtTheEnd) const {
@@ -665,14 +666,15 @@ std::optional<std::vector<JourneyStep>> WorldMap::GetJourneyPath(shared_ptr<Turt
             auto key = current.MakeKey();
             std::optional<long long> proceedingArrivalTime;
             while (key != StateKey{turtle->position, startTime, turtle->face}) {
+                Node fullNode = edgeInfo[key];
                 JourneyStep journeyStep{
-                    edgeInfo[key].vector,
-                    edgeInfo[key].action,
-                    edgeInfo[key].arriveTime,
+                    fullNode.vector,
+                    fullNode.action,
+                    fullNode.arriveTime,
                     proceedingArrivalTime
                 };
                 path.push_back(journeyStep);
-                proceedingArrivalTime = edgeInfo[key].arriveTime;
+                proceedingArrivalTime = fullNode.arriveTime;
                 key = cameFrom[key];
             }
 

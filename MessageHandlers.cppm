@@ -21,6 +21,7 @@ import ResponseMessages;
 import WorldMap;
 
 import TurtleRegistry;
+import Turtle;
 
 using json = nlohmann::json;
 
@@ -116,15 +117,13 @@ namespace Heartbeat {
     void handle(const websocketpp::connection_hdl& ws, const json& message) {
         try {
             auto [type, payload] = message.get<Message>();
-
-            if (registry.getByConnection(ws)) {
-                registry.getByConnection(ws)->Update(payload.data);
+            if (const auto turtle = registry.getByConnection(ws)) {
+                turtle->Update(payload.data);
                 return;
             }
 
             const auto turtle = std::make_shared<Turtle>(ws, payload.data);
             registry.registerTurtle(turtle);
-
         } catch (const std::exception& e) {
             std::cout << "Invalid turtleBorn message: " << e.what() << std::endl;
         }
@@ -170,11 +169,10 @@ namespace JourneyPathRequest {
             }
 
             const auto sender = registry.getByConnection(ws);
+            if (!sender) throw std::invalid_argument("JourneyPathRequest message error: getByConnection failed");
+
             sender->Update(payload.data);
-
-            auto& map = DimensionMaps[sender->dimension];
-
-            auto path = map->GetJourneyPath(
+            auto path = sender->dimension->GetJourneyPath(
                 sender,
                 payload.destinations,
                 payload.timeLimit,
@@ -218,21 +216,25 @@ namespace JourneyStart {
             auto [type, payload] = message.get<Message>();
 
             if (!registry.getByConnection(ws)) {
-                const auto turtle = std::make_shared<Turtle>(ws, payload.data);
+                auto turtle = std::make_shared<Turtle>(ws, payload.data);
                 registry.registerTurtle(turtle);
             }
 
             const auto sender = registry.getByConnection(ws);
+            if (!sender) {
+                std::cout<< "JourneyStart message error: getByConnection failed";
+                return;
+            }
+
             sender->Update(payload.data);
 
-            const bool permission = DimensionMaps[sender->dimension]->MakePathReservation(
+            const bool permission = sender->dimension->MakePathReservation(
                 sender->id,
                 payload.journeyPath
             );
 
             if (permission && !payload.journeyPath.empty()) {
-                auto* map = DimensionMaps[sender->dimension];
-                auto* entry = map->TryGet(sender->position);
+                auto* entry = sender->dimension->TryGet(sender->position);
 
                 if (entry && !entry->timeline.empty()) {
                     auto& entity = entry->timeline.back();
@@ -246,7 +248,7 @@ namespace JourneyStart {
 
             const json response = getJourneyStartResponse(permission);
             turtleHub.send(ws, response.dump(), websocketpp::frame::opcode::text);
-
+            
         } catch (const std::exception& e) {
             std::cout << "Invalid journey message: " << e.what() << std::endl;
         }

@@ -9,14 +9,12 @@
 
 import MessageHandlers;
 import TurtleRegistry;
+import WorldMap;
 import Globals;
 import Turtle;
-import WorldMap;
 
 using json = nlohmann::json;
 using namespace std;
-
-typedef websocketpp::server<websocketpp::config::asio> server;
 
 int getPort() {
     int port = 9002;
@@ -47,7 +45,7 @@ int main() {
         std::cout << "New connection established" << endl;
     });
 
-    turtleHub.set_message_handler([](const websocketpp::connection_hdl& ws, const server::message_ptr& message) {
+    turtleHub.set_message_handler([](const websocketpp::connection_hdl& ws, const turtleHub::message_ptr& message) {
         try {
             json msg = json::parse(message->get_payload());
             if (!msg.contains("type") || !msg["type"].is_string()) {
@@ -67,9 +65,11 @@ int main() {
 
     turtleHub.set_close_handler([](const websocketpp::connection_hdl& ws) {
         shared_ptr<Turtle> turtle = registry.getByConnection(ws);
+        if (!turtle) {
+            std::cout << "close handler error turtle is not there for some reason";
+        }
 
-        WorldMap* map = DimensionMaps[turtle->dimension];
-        MapEntry* firstStepMapEntry = map->TryGet(turtle->position);
+        MapEntry* firstStepMapEntry = turtle->dimension->TryGet(turtle->position);
         if (!firstStepMapEntry) return;
 
         auto& timeline = firstStepMapEntry->timeline;

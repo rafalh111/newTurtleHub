@@ -6,32 +6,30 @@ module;
 export module ResponseMessages;
 
 import Utils;
-import Turtle;
-
 export inline nlohmann::json getPingResponse(int number) {
     return nlohmann::json {
-        {"type", "pong"},
-        {"payload", {"number", number}},
-    };
+            {"type", "pong"},
+            {"payload", {"number", number}},
+        };
 }
 
 export inline nlohmann::json getJourneyPathRequestResponse(std::optional<std::vector<JourneyStep>> journeyPath) {
     return nlohmann::json {
-        {"type", "journeyPath"},
-        {"payload", {"journeyPath", journeyPath}}
+            {"type", "journeyPath"},
+            {"payload", {"journeyPath", journeyPath}}
     };
 }
 
 export inline nlohmann::json getJourneyStartResponse(bool permission) {
     return nlohmann::json {
-        {"type", "journeyStartPermission"},
-        {"payload", {"permission", permission}}
+            {"type", "journeyStartPermission"},
+            {"payload", {"permission", permission}}
     };
 }
 
 export inline nlohmann::json getObstacleWarningResponse(Vec3 vector) {
     return nlohmann::json {
-        {"type", "ObstacleWarning"},
-        {"payload", {"vector", vector}}
+            {"type", "ObstacleWarning"},
+            {"payload", {"vector", vector}}
     };
 }

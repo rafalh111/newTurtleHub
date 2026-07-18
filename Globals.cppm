@@ -10,17 +10,18 @@ export module Globals;
 
 import TurtleRegistry;
 import WorldMap;
+import Utils;
 
-extern websocketpp::server<websocketpp::config::asio> turtleHub;
-extern TurtleRegistry registry;
-WorldMap OverworldMap;
-WorldMap NetherMap;
-WorldMap EndMap;
+export extern websocketpp::server<websocketpp::config::asio> turtleHub;
+export extern TurtleRegistry registry;
+WorldMap OverworldMap{"overworld.json"};
+WorldMap NetherMap{"nether.json"};
+WorldMap EndMap{"end.json"};
 
-extern std::unordered_map<std::string, WorldMap*> DimensionMaps = {
-    {"overworld", *OverworldMap},
-    {"nether", *NetherMap},
-    {"end", *EndMap}
+export std::unordered_map<std::string, WorldMap*> DimensionMaps = {
+    {"overworld", &OverworldMap},
+    {"nether", &NetherMap},
+    {"end", &EndMap}
 };
 
 // std::unordered_map<std::string, WorldMap*>& getDimensionMaps() {

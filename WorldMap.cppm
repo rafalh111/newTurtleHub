@@ -13,28 +13,25 @@ module;
 #include <iostream>
 #include <optional>
 #include <utility>
-#include <climits>
+// #include <climits>
 #include <fstream>
 #include <vector>
 #include <string>
 
+
 export module WorldMap;
 
-import Turtle;
+// import Turtle;
 import Utils;
-import TurtleRegistry;
-import ResponseMessages;
+import Turtle;
+// import ResponseMessages;
+// import Globals;
 
 using namespace std;
 
-extern websocketpp::server<websocketpp::config::asio> turtleHub;
-extern TurtleRegistry registry;
-
-struct Block;
-struct TurtleReservation;
-
-struct ITimelineEntity {
-    virtual ~ITimelineEntity() = default;
+export struct Block;
+export struct ITimelineEntity {
+    virtual ~ITimelineEntity();
 
     [[nodiscard]] virtual TimeInterval& getTimeInterval() = 0;
     virtual std::pair<bool, bool> handleSolidDetection(const Block& detectedBlock, Vec3 vector) = 0;
@@ -42,13 +39,13 @@ struct ITimelineEntity {
     virtual std::optional<int> getId() = 0;
 };
 
-struct Block : ITimelineEntity {
+export struct Block : ITimelineEntity {
     TimeInterval timeInterval;
     std::string name;
     std::unordered_map<std::string, std::string> state;
     std::vector<std::string> tags;
 
-    TimeInterval& getTimeInterval() override;
+    [[nodiscard]] TimeInterval& getTimeInterval() override;
     std::pair<bool, bool> handleSolidDetection(const Block& detectedBlock, Vec3 vector) override;
     bool handleEmptyDetection() override;
     std::optional<int> getId() override;
@@ -69,7 +66,7 @@ struct Block : ITimelineEntity {
     }
 };
 
-struct TurtleReservation : ITimelineEntity {
+export struct TurtleReservation : ITimelineEntity {
     TimeInterval timeInterval;
     int turtleId{};
 
@@ -90,10 +87,30 @@ struct TurtleReservation : ITimelineEntity {
     }
 };
 
-struct MapEntry {
+export struct MapEntry {
     vector<std::unique_ptr<ITimelineEntity>> timeline;
 
-    ITimelineEntity* FindEntityByTime(long long time);
+    ITimelineEntity* FindEntityByTime(const long long time) {
+        const auto it = std::upper_bound(
+            timeline.begin(),
+            timeline.end(),
+            time,
+            [](long long time_for_comparison, const auto& entity) {
+                return time_for_comparison < entity->getTimeInterval().start;
+            }
+        );
+
+        if (it == timeline.begin()) return nullptr;
+
+        const auto curr = std::prev(it);
+        const auto& timeline_entity = *curr;
+
+        if (timeline_entity->getTimeInterval().EnclosesPoint(time)) {
+            return timeline_entity.get();  // 👈 return raw pointer
+        }
+
+        return nullptr;
+    }
 
     friend void to_json(nlohmann::json& j, const MapEntry& m) {
         j["timeline"] = nlohmann::json::array();
@@ -132,12 +149,17 @@ struct MapEntry {
     }
 };
 
+using namespace std;
+using json = nlohmann::json;
+namespace fs = filesystem;
+
 export class WorldMap {
     std::string mapFilePath;
     std::unordered_map<Vec3, MapEntry> map;
+    
     void CleanEntry(const Vec3& pos);
     bool ValidateTimelineInsertion(Vec3 position, const std::unique_ptr<ITimelineEntity> &entity, bool forced);
-    void InsertTimelineEntity(Vec3 position,  std::unique_ptr<ITimelineEntity> entity, bool recomputeInsertPosition = true);
+    void InsertTimelineEntity(Vec3 position, std::unique_ptr<ITimelineEntity> entity, bool recomputeInsertPosition = true);
 
     public:
         explicit WorldMap(std::string mapFilePath);
@@ -146,9 +168,7 @@ export class WorldMap {
         void SonarUpdate(Vec3 pos, const Block& block, bool solid);
         void Save();
         bool MakeReservation(int id, Vec3 position, const TimeInterval &reservationTimeInterval, bool forced);
-        bool ScheduleBlock(const std::string &name, const std::unordered_map<std::string, std::string> &state,
-                           const std::vector<std::string> &tags, Vec3 position, const TimeInterval &blockTimeInterval,
-                           bool forced);
+        bool ScheduleBlock(const std::string &name, const std::unordered_map<std::string, std::string> &state, const std::vector<std::string> &tags, Vec3 position, const TimeInterval &blockTimeInterval,bool forced);
 
         bool MakePathReservation(int id, const std::vector<JourneyStep>& journeyPath);
 
@@ -161,28 +181,15 @@ using namespace std;
 using json = nlohmann::json;
 namespace fs = filesystem;
 
-bool TimeInterval::OverlapsWith(const TimeInterval& other) const {
-    return start < other.end.value_or(LLONG_MAX) && end.value_or(LLONG_MAX) > other.start;
+ITimelineEntity::~ITimelineEntity() {
 }
 
-bool TimeInterval::Encloses(const TimeInterval& inner) const {
-    return start < inner.start && inner.end.value_or(LLONG_MAX) < end.value_or(LLONG_MAX);
-}
-
-bool TimeInterval::EnclosesPoint(const long long point) const {
-    return start <= point && point <= end;
-}
-
+// Block method implementations
 TimeInterval& Block::getTimeInterval() {
     return timeInterval;
 }
 
-bool Block::handleEmptyDetection() {
-    constexpr bool toBeRemoved = true;
-    return toBeRemoved;
-}
-
-std::pair<bool, bool> Block::handleSolidDetection(const Block &detectedBlock, Vec3 vector) {
+std::pair<bool, bool> Block::handleSolidDetection(const Block& detectedBlock, Vec3 vector) {
     constexpr bool toBeRemoved = false;
     constexpr bool canInsert = false;
 
@@ -193,24 +200,27 @@ std::pair<bool, bool> Block::handleSolidDetection(const Block &detectedBlock, Ve
     return {toBeRemoved, canInsert};
 }
 
+bool Block::handleEmptyDetection() {
+    constexpr bool toBeRemoved = true;
+    return toBeRemoved;
+}
+
 std::optional<int> Block::getId() {
     return std::nullopt;
 }
 
+// TurtleReservation method implementations
 TimeInterval& TurtleReservation::getTimeInterval() {
     return timeInterval;
 }
 
-bool TurtleReservation::handleEmptyDetection() {
-    constexpr bool toBeRemoved = false;
-    return toBeRemoved;
-}
-
-std::pair<bool, bool> TurtleReservation::handleSolidDetection(const Block &detectedBlock, const Vec3 vector) {
+std::pair<bool, bool> TurtleReservation::handleSolidDetection(const Block& detectedBlock, Vec3 vector) {
     //critical situation, placeholder
-    if (const auto turtlePtr = registry.getById(turtleId)) {
-        turtlePtr->ObstacleWarning(vector);
-    }
+
+    //     if (const auto turtlePtr = registry.getById(turtleId)) {
+    //         turtlePtr->ObstacleWarning(vector);
+    //     }
+
 
     constexpr bool toBeRemoved = true;
     constexpr bool canInsert = true;
@@ -218,30 +228,13 @@ std::pair<bool, bool> TurtleReservation::handleSolidDetection(const Block &detec
     return {toBeRemoved, canInsert};
 }
 
-std::optional<int> TurtleReservation::getId() {
-    return turtleId;
+bool TurtleReservation::handleEmptyDetection() {
+    constexpr bool toBeRemoved = false;
+    return toBeRemoved;
 }
 
-ITimelineEntity* MapEntry::FindEntityByTime(const long long time) {
-    const auto it = std::upper_bound(
-        timeline.begin(),
-        timeline.end(),
-        time,
-        [](long long time_for_comparison, const auto& entity) {
-            return time_for_comparison < entity->getTimeInterval().start;
-        }
-    );
-
-    if (it == timeline.begin()) return nullptr;
-
-    const auto curr = std::prev(it);
-    const auto& timeline_entity = *curr;
-
-    if (timeline_entity->getTimeInterval().EnclosesPoint(time)) {
-        return timeline_entity.get();  // 👈 return raw pointer
-    }
-
-    return nullptr;
+std::optional<int> TurtleReservation::getId() {
+    return turtleId;
 }
 
 WorldMap::WorldMap(string mapFilePath) : mapFilePath(std::move(mapFilePath)) {
@@ -282,7 +275,7 @@ void WorldMap::CleanEntry(const Vec3& pos) {
         if (!timelineEntity->getTimeInterval().EnclosesPoint(now)) return false;
         const std::optional<int> optId = timelineEntity->getId();
         if (!optId.has_value()) return false;
-        if (registry.getById(optId.value())->position == pos) return false;
+        if (registry.getById(optId.value()) && registry.getById(optId.value())->position == pos) return false;
         return true;
     };
 
@@ -294,7 +287,7 @@ void WorldMap::CleanEntry(const Vec3& pos) {
         return false;
     };
 
-    for (int i = static_cast<int>timeline.size() - 1; i >= 0; --i) {
+    for (int i = static_cast<int>(timeline.size()) - 1; i >= 0; --i) {
         if (const auto& timelineEntity = timeline[i];
             isDangling(timelineEntity) || isExpired(timelineEntity)) {
             timeline.erase(timeline.begin() + i);
@@ -367,7 +360,7 @@ bool WorldMap::ValidateTimelineInsertion(const Vec3 position, const std::unique_
     return true;
 }
 
-void WorldMap::InsertTimelineEntity(const Vec3 position, std::unique_ptr<ITimelineEntity> entity) {
+void WorldMap::InsertTimelineEntity(Vec3 position, std::unique_ptr<ITimelineEntity> entity, bool recomputeInsertPosition) {
     auto& timeline = map[position].timeline;
     const auto [start, end] = entity->getTimeInterval();
 
@@ -401,15 +394,20 @@ bool WorldMap::MakeReservation(const int id, const Vec3 position,
 
 bool WorldMap::ScheduleBlock(const std::string &name, const std::unordered_map<std::string, std::string> &state,
                              const std::vector<std::string> &tags, const Vec3 position,
-                             const TimeInterval &blockTimeInterval) {
+                             const TimeInterval &blockTimeInterval,
+                             bool forced) {
     Block block;
     block.timeInterval = blockTimeInterval;
     block.name = name;
     block.state = state;
     block.tags = tags;
 
+    std::unique_ptr<ITimelineEntity> ptr = std::make_unique<Block>(block);
+
+    if (!ValidateTimelineInsertion(position, ptr, forced)) return false;
+
     // Insert new reservation (move for efficiency)
-    InsertTimelineEntity(position, std::make_unique<Block>(block));
+    InsertTimelineEntity(position, std::move(ptr));
     return true;
 }
 

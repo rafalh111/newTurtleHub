@@ -4,55 +4,21 @@
 
 module;
 #include <websocketpp/common/connection_hdl.hpp>
+#include <websocketpp/config/asio_no_tls.hpp>
+#include <websocketpp/frame.hpp>
 #include <nlohmann/json.hpp>
 #include <utility>
 #include <vector>
 #include <string>
 #include <chrono>
 
-
 export module Turtle;
 
 import Utils;
-import WorldMap;
-import Globals;
-// import ResponseMessages;
-export enum class TurtleAction {
-    Forward,
-    Up,
-    Down,
-    TurnLeft,
-    TurnRight
-};
 
-TurtleAction parseAction(const std::string& str) {
-    if (str == "Forward") return TurtleAction::Forward;
-    if (str == "Up")      return TurtleAction::Up;
-    if (str == "Down")    return TurtleAction::Down;
-    if (str == "TurnLeft")  return TurtleAction::TurnLeft;
-    if (str == "TurnRight") return TurtleAction::TurnRight;
-    throw std::invalid_argument("Unknown action");
-}
-
-export struct JourneyStep {
-    Vec3 position;
-    TurtleAction action;
-    TimeInterval timeInterval;
-
-    friend void to_json(nlohmann::json& j, const JourneyStep& s) {
-        j = nlohmann::json{
-        {"position", s.position},
-        {"frbludDirection", s.action},
-        {"timeInterval", s.timeInterval},
-        };
-    }
-
-    friend void from_json(const nlohmann::json& j, JourneyStep& s) {
-        s.position = j.at("position").get<Vec3>();
-        s.action = parseAction(j.at("action").get<std::string>());
-        s.timeInterval = j.at("timeInterval").get<TimeInterval>();
-    }
-};
+// Forward declare and extern declare DimensionMaps which is defined in Globals
+class WorldMap;
+extern std::unordered_map<std::string, WorldMap*> DimensionMaps;
 
 export struct TurtleData {
     int id;
@@ -69,7 +35,7 @@ export struct TurtleData {
         t.position = j.at("position").get<Vec3>();
         if (const auto it = DimensionMaps.find(j.at("dimension").get<std::string>()); it != DimensionMaps.end()) {
             t.dimension = it->second;
-        else {
+        } else {
             throw std::invalid_argument("Turtle with id: " + std::to_string(t.id) + " has a dimension that doesn't exist");
         }
 
@@ -95,7 +61,7 @@ export struct Turtle {
     Turtle(websocketpp::connection_hdl ws_, const TurtleData& data);
     void Update(const TurtleData& data);
     void ObstacleWarning(Vec3 vector);
-}
+};
 
 Turtle::Turtle(websocketpp::connection_hdl ws_, const TurtleData& data) :
     id(data.id), ws(std::move(ws_)), position(data.position.x, data.position.y, data.position.z), dimension(data.dimension), fuel(data.fuel), busy(data.busy),
@@ -113,6 +79,7 @@ void Turtle::Update(const TurtleData& data) {
 }
 
 void Turtle::ObstacleWarning(const Vec3 vector) {
-    const nlohmann::json response = getObstacleWarningResponse(vector);
-    turtleHub.send(ws, response.dump(), websocketpp::frame::opcode::text);
+    // TODO: Send obstacle warning through websocket hub
+    // This requires access to turtleHub which would create a circular dependency
+    // Implementation should be moved to MessageHandlers where Globals is imported
 }

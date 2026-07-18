@@ -11,9 +11,9 @@ endif()
 add_executable(untitled
         Utils.cppm
         Turtle.cppm
-        TurtleRegistry.cppm
         ResponseMessages.cppm
+        TurtleRegistry.cppm
         WorldMap.cppm
-        MessageHandlers.cppm
         Globals.cppm
+        MessageHandlers.cppm
         main.cpp)

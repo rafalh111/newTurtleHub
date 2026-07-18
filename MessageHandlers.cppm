@@ -20,8 +20,10 @@ export module MessageHandlers;
 import ResponseMessages;
 import WorldMap;
 
+
 import TurtleRegistry;
 import Turtle;
+import Utils;
 
 using json = nlohmann::json;
 

@@ -1,13 +1,14 @@
 module;
+#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
+#include <unordered_map>
 #include <functional>
 #include <stdexcept>
 #include <optional>
+#include <climits>
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include <ranges>
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
 
 export module Utils;
 
@@ -250,10 +251,17 @@ export struct TimeInterval {
     long long start{};
     std::optional<long long> end;
 
+    [[nodiscard]] bool OverlapsWith(const TimeInterval& other) const {
+        return start < other.end.value_or(LLONG_MAX) && end.value_or(LLONG_MAX) > other.start;
+    }
 
-    [[nodiscard]] bool OverlapsWith(const TimeInterval& other) const;
-    [[nodiscard]] bool Encloses(const TimeInterval& inner) const;
-    [[nodiscard]] bool EnclosesPoint(long long point) const;
+    [[nodiscard]] bool Encloses(const TimeInterval& inner) const {
+        return start < inner.start && inner.end.value_or(LLONG_MAX) < end.value_or(LLONG_MAX);
+    }
+
+    [[nodiscard]] bool EnclosesPoint(const long long point) const {
+        return start <= point && point <= end.value_or(LLONG_MAX);
+    }
 
     friend void to_json(nlohmann::json& j, const TimeInterval& t) {
         j = nlohmann::json{
@@ -269,5 +277,42 @@ export struct TimeInterval {
         } else {
             t.end = std::nullopt;
         }
+    }
+};
+
+export enum class TurtleAction {
+    Forward,
+    Up,
+    Down,
+    TurnLeft,
+    TurnRight
+};
+
+export inline TurtleAction parseAction(const std::string& str) {
+    if (str == "Forward") return TurtleAction::Forward;
+    if (str == "Up")      return TurtleAction::Up;
+    if (str == "Down")    return TurtleAction::Down;
+    if (str == "TurnLeft")  return TurtleAction::TurnLeft;
+    if (str == "TurnRight") return TurtleAction::TurnRight;
+    throw std::invalid_argument("Unknown action");
+}
+
+export struct JourneyStep {
+    Vec3 position;
+    TurtleAction action;
+    TimeInterval timeInterval;
+
+    friend void to_json(nlohmann::json& j, const JourneyStep& s) {
+        j = nlohmann::json{
+        {"position", s.position},
+        {"frbludDirection", s.action},
+        {"timeInterval", s.timeInterval},
+        };
+    }
+
+    friend void from_json(const nlohmann::json& j, JourneyStep& s) {
+        s.position = j.at("position").get<Vec3>();
+        s.action = parseAction(j.at("action").get<std::string>());
+        s.timeInterval = j.at("timeInterval").get<TimeInterval>();
     }
 };

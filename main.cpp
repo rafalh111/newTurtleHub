@@ -76,9 +76,8 @@ int main() {
         if (timeline.empty()) return;
 
         auto& entity = timeline.back();
-        auto& [start, end] = entity->getTimeInterval();
 
-        if (!end.has_value() && entity->hasId(turtle->id)) {
+        if (auto& [start, end] = entity->getTimeInterval(); !end.has_value() && entity->hasId(turtle->id)) {
             long long now = chrono::duration_cast<chrono::milliseconds>(
                 chrono::system_clock::now().time_since_epoch()
             ).count();
